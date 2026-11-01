@@ -1,10 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Check, Loader2, AlertTriangle, BadgeCheck, ExternalLink } from 'lucide-react';
-import { IdentitySDK } from '@goodsdks/citizen-sdk';
-import { useQuery } from '@tanstack/react-query';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { User, Check, Loader2 } from 'lucide-react';
 import { useCreator } from '@/providers/CreatorProvider';
 import { useSaveProfile } from '@/hooks/useSaveProfile';
 
@@ -14,26 +11,11 @@ const inputClass =
   'w-full rounded-lg border border-line bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-foreground/40 outline-none';
 
 export default function SettingsForm() {
-  const { creator, setCreator, walletAddress } = useCreator();
+  const { creator, setCreator } = useCreator();
   const { saveProfile, isOnChain, regStatus, regError } = useSaveProfile();
-  const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient({ chainId: 42220 });
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [kycBusy, setKycBusy] = useState(false);
-  const [kycError, setKycError] = useState('');
-  const verificationQuery = useQuery<{ verified: boolean }>({
-    queryKey: ['gooddollar-verification', walletAddress],
-    enabled: !!walletAddress,
-    queryFn: async () => {
-      const response = await fetch(`/api/gooddollar/verification?wallet=${walletAddress}`);
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Could not check GoodDollar verification.');
-      return result;
-    },
-  });
 
   const bioLength = (creator.bio || '').length;
 
@@ -45,43 +27,14 @@ export default function SettingsForm() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setSaveError('');
     try {
       const ok = await saveProfile(creator);
       if (ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2200);
       }
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Could not save your profile.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const startGoodDollarVerification = async () => {
-    setKycError('');
-    if (!walletAddress || !walletClient || !publicClient) {
-      setKycError('Connect your wallet on Celo before starting verification.');
-      return;
-    }
-
-    setKycBusy(true);
-    try {
-      const identitySDK = await IdentitySDK.init({
-        publicClient,
-        walletClient,
-        env: 'production',
-      });
-      const verificationUrl = await identitySDK.generateFVLink(
-        false,
-        `${window.location.origin}/settings`,
-        42220,
-      );
-      window.location.assign(verificationUrl);
-    } catch (error) {
-      setKycError(error instanceof Error ? error.message : 'Could not start GoodDollar verification.');
-      setKycBusy(false);
     }
   };
 
@@ -104,39 +57,6 @@ export default function SettingsForm() {
             </span>
           )}
         </div>
-
-        {verificationQuery.data?.verified ? (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-success/30 bg-success-bg p-3 text-sm text-success">
-            <BadgeCheck size={17} className="shrink-0" />
-            <p className="font-semibold">GoodDollar-verified creator</p>
-          </div>
-        ) : walletAddress ? (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
-            <div className="flex items-start gap-2">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-              <p>Verification is optional. You can use the app without it; GoodDollar UBI-claim spins still require verification.</p>
-            </div>
-            <button
-              type="button"
-              onClick={startGoodDollarVerification}
-              disabled={kycBusy}
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              {kycBusy ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />}
-              Complete KYC
-            </button>
-          </div>
-        ) : null}
-        {verificationQuery.isError && (
-          <p role="alert" className="mb-4 rounded-lg bg-danger-bg px-3.5 py-2.5 text-xs font-medium text-danger">
-            {verificationQuery.error instanceof Error
-              ? verificationQuery.error.message
-              : 'Could not check GoodDollar verification.'}
-          </p>
-        )}
-        {kycError && (
-          <p role="alert" className="mb-4 rounded-lg bg-danger-bg px-3.5 py-2.5 text-xs font-medium text-danger">{kycError}</p>
-        )}
 
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <div>
@@ -186,9 +106,6 @@ export default function SettingsForm() {
 
           {regError && (
             <p className="rounded-lg bg-danger-bg px-3.5 py-2.5 text-xs font-medium text-danger">{regError}</p>
-          )}
-          {saveError && (
-            <p role="alert" className="rounded-lg bg-danger-bg px-3.5 py-2.5 text-xs font-medium text-danger">{saveError}</p>
           )}
 
           <button

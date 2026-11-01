@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BadgeCheck } from 'lucide-react';
 
 interface LeaderboardEntry {
   rank: number;
@@ -11,24 +10,16 @@ interface LeaderboardEntry {
   avatarUrl: string;
   totalReceived: number;
   tipsCount: number;
-  gooddollar_verified: boolean;
 }
 
 export default function CreatorsLeaderboard() {
   const [items, setItems] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     fetch('/api/leaderboard/creators?limit=10')
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Could not load creator spotlight.');
-        return res.json() as Promise<LeaderboardEntry[]>;
-      })
-      .then(setItems)
-      .catch((fetchError: unknown) => {
-        setError(fetchError instanceof Error ? fetchError.message : 'Could not load creator spotlight.');
-      })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: LeaderboardEntry[]) => setItems(data))
       .finally(() => setLoading(false));
   }, []);
 
@@ -38,10 +29,10 @@ export default function CreatorsLeaderboard() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              Creator spotlight
+              Leaderboard
             </p>
             <h3 className="mt-1 font-display text-2xl font-bold tracking-tight">
-              Creators your community is supporting
+              Most tipped creators
             </h3>
           </div>
           <p className="text-xs text-muted-foreground">All-time G$ received</p>
@@ -53,11 +44,9 @@ export default function CreatorsLeaderboard() {
               <div key={i} className="h-14 animate-pulse rounded-xl border border-line bg-background/40" />
             ))}
           </div>
-        ) : error ? (
-          <p role="alert" className="rounded-xl bg-danger-bg p-4 text-sm text-danger">{error}</p>
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-line bg-background/40 p-8 text-center">
-            <p className="text-sm font-semibold">No creator spotlight data yet</p>
+            <p className="text-sm font-semibold">No leaderboard data yet</p>
             <p className="mt-1 text-xs text-muted-foreground">Tips will appear here once creators start receiving G$.</p>
           </div>
         ) : (
@@ -88,11 +77,6 @@ export default function CreatorsLeaderboard() {
                   <p className="truncate font-mono text-[11px] text-muted-foreground">@{item.username}</p>
                 </div>
                 <div className="text-right">
-                  {item.gooddollar_verified && (
-                    <p className="mb-0.5 flex items-center justify-end gap-1 text-[10px] font-semibold text-success">
-                      <BadgeCheck size={12} /> Verified
-                    </p>
-                  )}
                   <p className="font-display text-lg font-bold">{item.totalReceived.toLocaleString()} G$</p>
                   <p className="text-[11px] text-muted-foreground">{item.tipsCount} tips</p>
                 </div>

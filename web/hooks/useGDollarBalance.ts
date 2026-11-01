@@ -8,7 +8,7 @@ import { G_DOLLAR_ADDRESS, ERC20_ABI } from '@/lib/contracts';
  * Live G$ balance for a wallet, refreshed every 15s.
  */
 export function useGDollarBalance(address?: `0x${string}`) {
-  const { data, isLoading, isError, error, refetch } = useReadContract({
+  const { data, isLoading, refetch } = useReadContract({
     address: G_DOLLAR_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
@@ -21,5 +21,5 @@ export function useGDollarBalance(address?: `0x${string}`) {
 
   const balance = data !== undefined ? Number(formatUnits(data, 18)) : null;
 
-  return { balance, isLoading, isError, error, refetch };
+  return { balance, isLoading, refetch };
 }

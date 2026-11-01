@@ -6,18 +6,18 @@
 /* ─── Design tokens ──────────────────────────────────────────── */
 
 :root {
-  --background: #f5f6f3;
+  --background: #fafaf8;
   --card: #ffffff;
-  --line: #e4e8e4;
-  --foreground: #10264a;
-  --muted: #edf0ec;
-  --muted-foreground: #667387;
-  --primary: #10264a;
+  --line: #e9e7e2;
+  --foreground: #161614;
+  --muted: #f3f2ee;
+  --muted-foreground: #6f6f68;
+  --primary: #161614;
   --primary-foreground: #ffffff;
-  --accent: #e7f52c;
-  --accent-foreground: #10264a;
-  --success: #159653;
-  --success-bg: rgba(21, 150, 83, 0.08);
+  --accent: #fcff52;
+  --accent-foreground: #1c1d0a;
+  --success: #15803d;
+  --success-bg: rgba(21, 128, 61, 0.08);
   --danger: #dc2626;
   --danger-bg: rgba(220, 38, 38, 0.07);
 }
@@ -29,10 +29,10 @@
   --foreground: #f4f4f0;
   --muted: #1d1d1a;
   --muted-foreground: #9c9c93;
-  --primary: #e7f52c;
-  --primary-foreground: #10264a;
-  --accent: #e7f52c;
-  --accent-foreground: #10264a;
+  --primary: #fcff52;
+  --primary-foreground: #1c1d0a;
+  --accent: #fcff52;
+  --accent-foreground: #1c1d0a;
   --success: #4ade80;
   --success-bg: rgba(74, 222, 128, 0.1);
   --danger: #f87171;
@@ -83,20 +83,6 @@
   }
 }
 
-.landing-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: radial-gradient(ellipse at center, black 10%, transparent 76%);
-}
-
-.glass-panel {
-  background: color-mix(in srgb, var(--card) 62%, transparent);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
 /* ─── Base ───────────────────────────────────────────────────── */
 
 * {
@@ -105,12 +91,6 @@
 
 html {
   scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
 }
 
 body {

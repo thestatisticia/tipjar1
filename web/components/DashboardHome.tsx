@@ -1,125 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import {
-  MessageSquare, Heart, ArrowRight, ArrowUpRight, Loader2, X, Bell,
-  ListTodo, Megaphone, RotateCw, Search, Wallet, Clock3,
-} from 'lucide-react';
-import { formatUnits, isAddress, parseUnits } from 'viem';
+import { Copy, Check, MessageSquare, Heart, ArrowRight, ArrowUpRight, Loader2, X } from 'lucide-react';
+import { isAddress, parseUnits } from 'viem';
 import { useWalletClient, usePublicClient } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
 import { useCreator } from '@/providers/CreatorProvider';
 import { useGDollarBalance } from '@/hooks/useGDollarBalance';
 import { ERC20_ABI, G_DOLLAR_ADDRESS } from '@/lib/contracts';
-import { useDashboardActivity } from '@/hooks/useDashboardActivity';
-import { syncNotifications } from '@/lib/notificationState';
-
-interface CreatorDashboardStats {
-  taskEarnings: string;
-  campaignEarnings: string;
-  pendingSpinRewards: string;
-  approvedPosts: number;
-}
-
-interface DashboardOpportunity {
-  id: string;
-  title: string;
-  description: string;
-  reward: string;
-  kind: 'task' | 'campaign';
-  availableCount: number;
-}
-
-async function loadDashboardOpportunities(): Promise<DashboardOpportunity[]> {
-  const [tasksResponse, campaignsResponse] = await Promise.all([
-    fetch('/api/tasks'),
-    fetch('/api/campaigns'),
-  ]);
-  const [tasks, campaigns] = await Promise.all([tasksResponse.json(), campaignsResponse.json()]);
-  if (!tasksResponse.ok || !campaignsResponse.ok) {
-    throw new Error(tasks.error || campaigns.error || 'Could not load opportunities.');
-  }
-  return [
-    ...(tasks as Array<{ id: string; title: string; description: string; reward_per_completion: string; slots: number }>)
-      .slice(0, 2)
-      .map((task) => ({
-        id: `task-${task.id}`,
-        title: task.title,
-        description: task.description,
-        reward: task.reward_per_completion,
-        kind: 'task' as const,
-        availableCount: task.slots,
-      })),
-    ...(campaigns as Array<{ id: string; title: string; description: string; reward_per_participant: string; available_participants: number }>)
-      .slice(0, 2)
-      .map((campaign) => ({
-        id: `campaign-${campaign.id}`,
-        title: campaign.title,
-        description: campaign.description,
-        reward: campaign.reward_per_participant,
-        kind: 'campaign' as const,
-        availableCount: campaign.available_participants,
-      })),
-  ].slice(0, 3);
-}
-
-interface SpinStatus {
-  availableSpins: Array<{ sourceType: 'ubi_claim' | 'task_completion' }>;
-}
-
-function formatAmount(amount: string, decimals = 18) {
-  return Number(formatUnits(BigInt(amount), decimals))
-    .toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
-function formatActivityDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? 'Date unavailable'
-    : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
-
-function activityStatusClass(status: string) {
-  const normalized = status.toLowerCase();
-  if (['approved', 'paid', 'received', 'sent'].includes(normalized)) return 'bg-success-bg text-success';
-  if (['rejected', 'failed'].includes(normalized)) return 'bg-danger-bg text-danger';
-  return 'bg-muted text-muted-foreground';
-}
 
 export default function DashboardHome() {
-  const { creator, tips, sentTips, tipStats, tipStatsError, refreshTipStats, walletAddress, isLoading: creatorLoading } = useCreator();
-  const { balance: gBalance, isLoading: balanceLoading, isError: balanceError, refetch: refetchBalance } = useGDollarBalance(walletAddress || undefined);
+  const { creator, tips, sentTips, tipStats, walletAddress } = useCreator();
+  const { balance: gBalance, isLoading: balanceLoading } = useGDollarBalance(walletAddress || undefined);
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  const activityQuery = useDashboardActivity();
-  const creatorStatsQuery = useQuery<CreatorDashboardStats>({
-    queryKey: ['creator-dashboard-stats', walletAddress],
-    enabled: !!walletAddress,
-    queryFn: async () => {
-      const response = await fetch(`/api/dashboard/stats?wallet=${walletAddress}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not load creator earnings stats.');
-      return data;
-    },
-  });
-  const opportunitiesQuery = useQuery({
-    queryKey: ['dashboard-opportunities'],
-    queryFn: loadDashboardOpportunities,
-    staleTime: 60_000,
-  });
-  const spinStatusQuery = useQuery<SpinStatus>({
-    queryKey: ['dashboard-spins', walletAddress],
-    enabled: Boolean(walletAddress),
-    retry: false,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const response = await fetch(`/api/spins?wallet=${encodeURIComponent(walletAddress)}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not load available spins.');
-      return data;
-    },
-  });
+  const [copied, setCopied] = useState(false);
   const [activeLedgerTab, setActiveLedgerTab] = useState<'received' | 'sent'>('received');
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [recipient, setRecipient] = useState('');
@@ -127,20 +22,32 @@ export default function DashboardHome() {
   const [isSending, setIsSending] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawTxHash, setWithdrawTxHash] = useState<`0x${string}` | null>(null);
-  const [withdrawTxStatus, setWithdrawTxStatus] = useState<'pending' | 'confirmed' | 'failed' | null>(null);
 
-  useEffect(() => {
-    if (walletAddress && activityQuery.data) syncNotifications(walletAddress, activityQuery.data);
-  }, [walletAddress, activityQuery.data]);
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const tipLink = `${origin}/tip/${creator.username || 'username'}`;
 
-  const historicalEarnings = creatorStatsQuery.data && !creatorStatsQuery.isError && !tipStatsError
-    ? tipStats.totalReceived +
-      Number(formatUnits(BigInt(creatorStatsQuery.data.taskEarnings), 18)) +
-      Number(formatUnits(BigInt(creatorStatsQuery.data.campaignEarnings), 18))
-    : null;
-  const pendingRewards = creatorStatsQuery.data
-    ? Number(BigInt(creatorStatsQuery.data.pendingSpinRewards))
-    : null;
+  const copyLink = () => {
+    navigator.clipboard.writeText(tipLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const avgTip = tipStats.receivedCount > 0
+    ? Math.round(tipStats.totalReceived / tipStats.receivedCount)
+    : 0;
+
+  const balanceDisplay = balanceLoading && gBalance == null
+    ? '…'
+    : gBalance != null
+      ? gBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })
+      : '—';
+
+  const stats = [
+    { label: 'Wallet balance', value: balanceDisplay, suffix: 'G$', live: true },
+    { label: 'Total received', value: tipStats.totalReceived.toLocaleString(), suffix: 'G$' },
+    { label: 'Total tipped', value: tipStats.totalTipped.toLocaleString(), suffix: 'G$' },
+    { label: 'Average tip', value: String(avgTip), suffix: 'G$' },
+  ];
 
   const handleSetMax = () => {
     if (gBalance == null || gBalance <= 0) return;
@@ -151,7 +58,6 @@ export default function DashboardHome() {
     e.preventDefault();
     setWithdrawError(null);
     setWithdrawTxHash(null);
-    setWithdrawTxStatus(null);
 
     if (!walletAddress || !walletClient || !publicClient) {
       setWithdrawError('Connect your wallet first.');
@@ -172,7 +78,6 @@ export default function DashboardHome() {
       return;
     }
 
-    let submittedTxHash: `0x${string}` | null = null;
     try {
       setIsSending(true);
       const parsedAmount = parseUnits(amount, 18);
@@ -183,21 +88,11 @@ export default function DashboardHome() {
         args: [recipient as `0x${string}`, parsedAmount],
       });
 
-      submittedTxHash = txHash;
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
       setWithdrawTxHash(txHash);
-      setWithdrawTxStatus('pending');
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      if (receipt.status !== 'success') {
-        setWithdrawTxStatus('failed');
-        setWithdrawError('The transfer transaction reverted on Celo.');
-        return;
-      }
-      setWithdrawTxStatus('confirmed');
       setAmount('');
-      await refetchBalance();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Transfer failed';
-      if (submittedTxHash) setWithdrawTxStatus('failed');
       setWithdrawError(msg.includes('User rejected') ? 'Transaction rejected.' : 'Transfer failed. Try again.');
     } finally {
       setIsSending(false);
@@ -206,268 +101,83 @@ export default function DashboardHome() {
 
   return (
     <div className="mx-auto flex max-w-5xl animate-fade-up flex-col gap-6">
-      <div>
+      {/* Greeting + tip link */}
+      <div className="flex items-end justify-between gap-6 max-md:flex-col max-md:items-stretch">
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight">
-            {creatorLoading ? 'Welcome' : creator.name ? `Welcome back, ${creator.name.split(' ')[0]}` : 'Welcome to GOODHUB'}
+            {creator.name ? `Hello, ${creator.name.split(' ')[0]}` : 'Welcome'}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Find opportunities, follow your rewards, and stay up to date.
+            Your earnings at a glance.
           </p>
+        </div>
+
+        <div className="flex h-10 max-w-md flex-1 items-center gap-1 rounded-xl border border-line bg-card pl-3.5 pr-1 max-md:max-w-none">
+          <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+            {creator.username ? tipLink : 'Set a username to activate your link'}
+          </span>
+          <button
+            onClick={copyLink}
+            disabled={!creator.username}
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-30"
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
         </div>
       </div>
+      <div className="flex justify-end">
+        <button
+          onClick={() => setWithdrawOpen(true)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-card px-3.5 text-sm font-semibold transition-colors hover:border-foreground/30"
+        >
+          Withdraw
+          <ArrowUpRight size={14} />
+        </button>
+      </div>
 
-      <section className="rounded-xl border border-line bg-card p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Onboarding nudge */}
+      {!creator.username && (
+        <Link
+          href="/settings"
+          className="flex items-center justify-between gap-4 rounded-xl border border-line bg-accent/15 px-5 py-4 transition-colors hover:bg-accent/25"
+        >
           <div>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Creator profile</p>
-            <h3 className="mt-1 font-display text-lg font-bold">
-              {creatorLoading ? 'Loading your profile…' : creator.username ? 'Your public page is active' : 'Activate your public page'}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {creatorLoading
-                ? 'Checking your saved profile details.'
-                : creator.username
-                  ? `Share your page at /tip/${creator.username}`
-                  : 'Choose a username to activate your page. A display name and bio are optional profile improvements.'}
+            <p className="text-sm font-semibold">Claim your username to start receiving tips</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Register your handle on-chain and set up your public page in Settings.
             </p>
           </div>
-          <div className="flex gap-2">
-            {creator.username && (
-              <a
-                href={`/tip/${creator.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-line px-3 text-sm font-semibold hover:bg-muted"
-              >
-                View page <ArrowUpRight size={14} />
-              </a>
-            )}
-            <Link href="/settings" className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">
-              {creator.username ? 'Edit profile' : 'Complete profile'} <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-          {[
-            { label: 'Choose a username', complete: Boolean(creator.username), required: true },
-            { label: 'Add a display name', complete: Boolean(creator.name), required: false },
-            { label: 'Write a short bio', complete: Boolean(creator.bio), required: false },
-          ].map(({ label, complete, required }) => (
-            <div key={label} className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2">
-              <span className={`h-2 w-2 rounded-full ${complete ? 'bg-success' : 'bg-muted-foreground/40'}`} />
-              <span className={complete ? 'text-foreground' : 'text-muted-foreground'}>{label}</span>
-              <span className="ml-auto text-xs text-muted-foreground">{complete ? 'Done' : required ? 'Required' : 'Optional'}</span>
+          <ArrowRight size={16} className="shrink-0 text-muted-foreground" />
+        </Link>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-xl border border-line bg-card p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+              {s.live && (
+                <span className="flex items-center gap-1 rounded-full bg-success-bg px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-success">
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-success" />
+                  Live
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="wallet" className="scroll-mt-24">
-        <div className="mb-3">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Financial overview</p>
-          <h3 className="mt-1 font-display text-lg font-bold">Your G$ activity</h3>
-        </div>
-        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2">
-          <article className="rounded-xl border border-line bg-card p-4">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground"><Wallet size={14} /> Wallet balance</div>
             <p className="mt-2 font-display text-2xl font-bold tracking-tight">
-              {balanceLoading ? '…' : balanceError ? 'Unavailable' : (gBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              <span className="ml-1 text-sm font-medium text-muted-foreground">G$</span>
+              {s.value}
+              {s.suffix && <span className="ml-1 text-sm font-medium text-muted-foreground">{s.suffix}</span>}
             </p>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Spendable in your wallet</span>
-              <button type="button" onClick={() => setWithdrawOpen(true)} disabled={balanceError || gBalance == null} className="text-xs font-bold text-primary disabled:opacity-40">
-                Send G$
-              </button>
-            </div>
-            {balanceError && <button type="button" onClick={() => void refetchBalance()} className="mt-2 text-xs font-semibold text-danger">Retry balance</button>}
-          </article>
-          <article className="rounded-xl border border-line bg-card p-4">
-            <p className="text-xs font-medium text-muted-foreground">Pending reward payouts</p>
-            <p className="mt-2 font-display text-2xl font-bold tracking-tight">
-              {creatorStatsQuery.isPending ? '…' : creatorStatsQuery.isError ? 'Unavailable' : (pendingRewards ?? 0).toLocaleString()}
-              <span className="ml-1 text-sm font-medium text-muted-foreground">G$</span>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">Spin awards awaiting payment</p>
-          </article>
-          <article className="rounded-xl border border-line bg-card p-4">
-            <p className="text-xs font-medium text-muted-foreground">Historical earnings</p>
-            <p className="mt-2 font-display text-2xl font-bold tracking-tight">
-              {creatorLoading || creatorStatsQuery.isPending ? '…' : creatorStatsQuery.isError || tipStatsError ? 'Unavailable' : (historicalEarnings ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              <span className="ml-1 text-sm font-medium text-muted-foreground">G$</span>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">Past tips and approved rewards, not wallet funds</p>
-          </article>
-          <article className="rounded-xl border border-line bg-card p-4">
-            <p className="text-xs font-medium text-muted-foreground">Available spins</p>
-            <p className="mt-2 font-display text-2xl font-bold tracking-tight">
-              {spinStatusQuery.isPending ? '…' : spinStatusQuery.isError ? 'Unavailable' : spinStatusQuery.data.availableSpins.length}
-            </p>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Eligible spins</span>
-              <Link href="/spin" className="text-xs font-bold text-primary">Open rewards</Link>
-            </div>
-          </article>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-line bg-card px-4 py-3 text-xs">
-          <span className="font-semibold text-muted-foreground">Historical breakdown</span>
-          <span>Tips: {creatorLoading ? '…' : tipStatsError ? 'Unavailable' : tipStats.totalReceived.toLocaleString()} G$</span>
-          <span>Tasks: {creatorStatsQuery.isPending ? '…' : creatorStatsQuery.isError ? 'Unavailable' : formatAmount(creatorStatsQuery.data.taskEarnings)} G$</span>
-          <span>Campaigns: {creatorStatsQuery.isPending ? '…' : creatorStatsQuery.isError ? 'Unavailable' : formatAmount(creatorStatsQuery.data.campaignEarnings)} G$</span>
-          {creatorStatsQuery.isError && (
-            <button type="button" onClick={() => void creatorStatsQuery.refetch()} className="font-semibold text-danger">Retry earnings</button>
-          )}
-          {tipStatsError && (
-            <button type="button" onClick={() => void refreshTipStats()} className="font-semibold text-danger">
-              Retry tip history
-            </button>
-          )}
-          {spinStatusQuery.isError && (
-            <button type="button" onClick={() => void spinStatusQuery.refetch()} className="font-semibold text-danger">Retry spin status</button>
-          )}
-        </div>
-      </section>
+          </div>
+        ))}
+      </div>
 
-      <section>
-        <div className="mb-3">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Get involved</p>
-          <h3 className="mt-1 font-display text-lg font-bold">Quick actions</h3>
-        </div>
-        <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
-          {[
-            { href: '/tasks', label: 'Find tasks', icon: ListTodo },
-            { href: '/spin', label: 'Daily rewards', icon: RotateCw },
-            { href: '/campaigns', label: 'Explore campaigns', icon: Megaphone },
-            { href: '/leaderboard', label: 'Discover creators', icon: Search },
-          ].map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 rounded-xl border border-line bg-card p-4 text-sm font-semibold transition-colors hover:border-foreground/30 hover:bg-muted/40"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                <Icon size={17} />
-              </span>
-              {label}
-              <ArrowRight size={14} className="ml-auto shrink-0 text-muted-foreground" />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Take part</p>
-            <h3 className="mt-1 font-display text-lg font-bold">Open opportunities</h3>
-          </div>
-          <div className="flex gap-4 text-sm font-semibold text-primary">
-            <Link href="/tasks">View all tasks</Link>
-            <Link href="/campaigns">View all campaigns</Link>
-          </div>
-        </div>
-        {opportunitiesQuery.isPending ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            {[0, 1, 2].map((item) => (
-              <div key={item} className="h-36 animate-pulse rounded-xl border border-line bg-card" />
-            ))}
-          </div>
-        ) : opportunitiesQuery.isError ? (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-card p-4 text-sm text-danger">
-            <span>{opportunitiesQuery.error instanceof Error ? opportunitiesQuery.error.message : 'Could not load opportunities.'}</span>
-            <button type="button" onClick={() => void opportunitiesQuery.refetch()} className="font-semibold">Retry</button>
-          </div>
-        ) : opportunitiesQuery.data.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line bg-card p-6 text-sm text-muted-foreground">
-            No open tasks or campaigns right now. Check back soon or explore creator pages.
-          </p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            {opportunitiesQuery.data.map((opportunity) => {
-              const isTask = opportunity.kind === 'task';
-              const reward = formatAmount(opportunity.reward);
-              return (
-                <article key={opportunity.id} className="rounded-xl border border-line bg-card p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      {isTask ? 'Task' : 'Campaign'}
-                    </span>
-                    <span className="font-mono text-xs font-bold">{reward} G$</span>
-                  </div>
-                  <h4 className="mt-3 line-clamp-1 font-display text-base font-bold">{opportunity.title}</h4>
-                  <p className="mt-1 line-clamp-2 min-h-10 text-xs leading-relaxed text-muted-foreground">{opportunity.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                    <span>{opportunity.availableCount} {isTask ? 'slots' : 'spots'} available</span>
-                    <span className="inline-flex items-center gap-1"><Clock3 size={12} /> No time estimate listed</span>
-                  </div>
-                  <Link href={isTask ? '/tasks' : '/campaigns'} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-                    View {isTask ? 'task' : 'campaign'} <ArrowRight size={13} />
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-line bg-card p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Updates</p>
-            <h3 className="mt-1 font-display text-lg font-bold">Recent activity</h3>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/notifications" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-              <Bell size={14} /> Notifications
-            </Link>
-            <button
-              type="button"
-              onClick={() => void activityQuery.loadActivity(Boolean(activityQuery.data))}
-              disabled={activityQuery.isFetching}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-line px-3 text-xs font-semibold disabled:opacity-50"
-            >
-              {activityQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <RotateCw size={14} />}
-              {activityQuery.data ? 'Refresh' : 'Load activity'}
-            </button>
-          </div>
-        </div>
-        {activityQuery.isError ? (
-          <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger">
-            {activityQuery.error instanceof Error ? activityQuery.error.message : 'Could not load account activity.'}
-          </p>
-        ) : !activityQuery.data ? (
-          <p className="rounded-lg border border-dashed border-line p-5 text-sm text-muted-foreground">
-            Sign a free wallet message to load your private task, campaign, tip, and reward activity. No transaction is sent.
-          </p>
-        ) : activityQuery.data.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-line p-5 text-sm text-muted-foreground">
-            No account activity yet. Task submissions, campaign updates, tips, and spin results will appear here.
-          </p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {activityQuery.data.slice(0, 5).map((event) => (
-              <li key={event.id} className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{event.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{event.description}</p>
-                  <time dateTime={event.createdAt} className="mt-1 block text-[11px] text-muted-foreground">{formatActivityDate(event.createdAt)}</time>
-                </div>
-                <div className="flex items-center gap-2">
-                  {event.amount && <span className="font-mono text-xs font-semibold">{event.category === 'tip' ? Number(event.amount).toLocaleString() : formatAmount(event.amount, event.category === 'spin' ? 0 : 18)} G$</span>}
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${activityStatusClass(event.status)}`}>{event.status}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Creator support activity */}
+      {/* Tips ledger */}
       <section className="rounded-xl border border-line bg-card p-6">
         <div className="mb-4 flex items-center justify-between gap-2.5">
           <MessageSquare size={17} className="text-muted-foreground" />
-          <h3 className="font-display text-[15px] font-semibold">Creator support activity</h3>
+          <h3 className="font-display text-[15px] font-semibold">Tip history</h3>
           <div className="flex items-center rounded-lg border border-line bg-background p-1 text-xs">
             <button
               onClick={() => setActiveLedgerTab('received')}
@@ -619,21 +329,6 @@ export default function DashboardHome() {
                   {withdrawError}
                 </p>
               )}
-              {withdrawTxStatus && (
-                <p role="status" className={`rounded-lg px-3.5 py-2.5 text-xs font-medium ${
-                  withdrawTxStatus === 'confirmed'
-                    ? 'bg-success-bg text-success'
-                    : withdrawTxStatus === 'failed'
-                      ? 'bg-danger-bg text-danger'
-                      : 'bg-muted text-muted-foreground'
-                }`}>
-                  {withdrawTxStatus === 'pending'
-                    ? 'Transaction submitted. Waiting for Celo confirmation…'
-                    : withdrawTxStatus === 'confirmed'
-                      ? 'Transfer confirmed on Celo.'
-                      : 'Transfer did not complete successfully.'}
-                </p>
-              )}
 
               <button
                 type="submit"
@@ -661,7 +356,7 @@ export default function DashboardHome() {
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground"
               >
-                View transaction: {withdrawTxHash.slice(0, 10)}…
+                View tx: {withdrawTxHash.slice(0, 10)}…
               </a>
             )}
           </div>

@@ -1,56 +1,49 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useAccount, useConnect } from 'wagmi';
+import { useEffect, useRef } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import { CreatorProvider } from '@/providers/CreatorProvider';
-import { getWalletConnectionErrorMessage } from '@/lib/walletErrors';
-import GoodHubLogo from '@/components/GoodHubLogo';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isConnected } = useAccount();
-  const { connectAsync, connectors, isPending } = useConnect();
-  const [connectError, setConnectError] = useState('');
+  const { ready, authenticated, login } = usePrivy();
+  const autoOpened = useRef(false);
 
-  const handleConnect = async () => {
-    const metaMask = connectors[0];
-    if (!metaMask) {
-      setConnectError('MetaMask is not available. Install the MetaMask browser extension and try again.');
-      return;
+  // Pop the Privy login modal over the current page (no redirect)
+  useEffect(() => {
+    if (ready && !authenticated && !autoOpened.current) {
+      autoOpened.current = true;
+      login();
     }
+  }, [ready, authenticated, login]);
 
-    setConnectError('');
-    try {
-      await connectAsync({ connector: metaMask, chainId: 42220 });
-    } catch (error) {
-      setConnectError(getWalletConnectionErrorMessage(error));
-    }
-  };
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-foreground" />
+      </div>
+    );
+  }
 
-  if (!isConnected) {
+  if (!authenticated) {
+    // Shown behind / after dismissing the Privy modal
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <div className="w-full max-w-sm animate-fade-up rounded-2xl border border-line bg-card p-8 text-center shadow-sm">
-          <GoodHubLogo className="h-10 text-base" />
-          <h1 className="mt-5 font-display text-2xl font-bold tracking-tight">Connect MetaMask</h1>
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-accent font-mono text-lg font-bold text-accent-foreground">
+            G$
+          </div>
+          <h1 className="mt-5 font-display text-2xl font-bold tracking-tight">Sign in required</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Connect your MetaMask wallet to access your GOODHUB dashboard.
+            Connect your wallet or email to access your creator dashboard.
           </p>
-          {connectError && (
-            <p role="alert" className="mt-4 text-sm text-danger">{connectError}</p>
-          )}
           <button
-            onClick={handleConnect}
-            disabled={isPending}
-            className="mt-6 h-11 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+            onClick={login}
+            className="mt-6 h-11 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90"
           >
-            {isPending ? 'Connecting…' : 'Connect MetaMask'}
+            Connect & sign in
           </button>
-          <Link href="/" className="mt-4 inline-block text-sm text-muted-foreground hover:text-foreground">
-            Back to home
-          </Link>
         </div>
       </div>
     );

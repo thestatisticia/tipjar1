@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Check, Share2, Sun, Moon } from 'lucide-react';
@@ -8,16 +8,10 @@ import { useCreator } from '@/providers/CreatorProvider';
 
 const PAGE_LABELS: Record<string, string> = {
   '/dashboard':    'Dashboard',
-  '/admin':        'Admin approvals',
-  '/tasks':        'Explore tasks',
-  '/campaigns':    'Campaigns',
-  '/notifications':'Notifications',
-  '/share':        'My public page',
-  '/spin':         'Daily rewards',
-  '/preview':      'My public page',
-  '/leaderboard':  'Discover creators',
+  '/share':        'Share',
+  '/preview':      'Tip Page',
   '/settings':     'Settings',
-  '/how-it-works': 'Help & support',
+  '/how-it-works': 'How it Works',
 };
 
 function shortAddr(addr: string) {
@@ -26,15 +20,13 @@ function shortAddr(addr: string) {
 
 export default function Navbar() {
   const [copied, setCopied] = useState(false);
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { creator, walletAddress } = useCreator();
   const username = creator.username;
+
+  useEffect(() => setMounted(true), []);
 
   const copyLink = () => {
     if (!username) return;

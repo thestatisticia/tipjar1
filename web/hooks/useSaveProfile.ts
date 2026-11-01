@@ -39,9 +39,7 @@ export function useSaveProfile() {
       }),
     });
     const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Could not save your profile.');
-    }
+    if (!data.success) return false;
 
     setCreator(data.profile);
     const tipsRes = await fetch(`/api/tips?username=${data.profile.username}`);
