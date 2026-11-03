@@ -15,11 +15,13 @@ export default function WidgetPage({ params }: { params: Promise<{ username: str
   }, [username]);
 
   const handleAddTip = async (tip: Tip) => {
-    await fetch('/api/tips', {
+    const response = await fetch('/api/tips', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tip),
     });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Could not save your tip activity.');
   };
 
   if (!creatorInfo) return null;

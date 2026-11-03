@@ -80,7 +80,10 @@ export function useSendTip(): UseSendTipResult {
           functionName: 'approve',
           args: [TIPJAR_REGISTRY_ADDRESS, amount],
         });
-        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        if (approvalReceipt.status !== 'success') {
+          throw new Error('G$ approval transaction reverted on Celo.');
+        }
         setStatus('approved');
       }
 
@@ -92,9 +95,11 @@ export function useSendTip(): UseSendTipResult {
         functionName: 'sendTip',
         args: [creatorUsername, amount, message],
       });
-      await publicClient.waitForTransactionReceipt({ hash: tipTx });
-
       setTxHash(tipTx);
+      const tipReceipt = await publicClient.waitForTransactionReceipt({ hash: tipTx });
+      if (tipReceipt.status !== 'success') {
+        throw new Error('Tip transaction reverted on Celo.');
+      }
       setStatus('success');
       return { txHash: tipTx, senderAddress: account };
     } catch (err: unknown) {
@@ -104,6 +109,8 @@ export function useSendTip(): UseSendTipResult {
         ? 'Transaction rejected'
         : msg.includes('insufficient')
         ? 'Insufficient G$ balance'
+        : msg.includes('reverted')
+        ? msg
         : 'Transaction failed — please try again';
       setError(friendly);
       setStatus('error');

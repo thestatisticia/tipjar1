@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 
-const CreatorsLeaderboard = dynamic(() => import('@/components/CreatorsLeaderboard'), { ssr: false });
+const CommunityLeaderboard = dynamic(() => import('@/components/CommunityLeaderboard'), { ssr: false });
 
 export default function LeaderboardPage() {
-  return <CreatorsLeaderboard />;
+  return <CommunityLeaderboard />;
 }

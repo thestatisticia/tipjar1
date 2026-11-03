@@ -6,18 +6,18 @@
 /* ─── Design tokens ──────────────────────────────────────────── */
 
 :root {
-  --background: #fafaf8;
+  --background: #f5f6f3;
   --card: #ffffff;
-  --line: #e9e7e2;
-  --foreground: #161614;
-  --muted: #f3f2ee;
-  --muted-foreground: #6f6f68;
-  --primary: #161614;
+  --line: #e4e8e4;
+  --foreground: #10264a;
+  --muted: #edf0ec;
+  --muted-foreground: #667387;
+  --primary: #10264a;
   --primary-foreground: #ffffff;
-  --accent: #fcff52;
-  --accent-foreground: #1c1d0a;
-  --success: #15803d;
-  --success-bg: rgba(21, 128, 61, 0.08);
+  --accent: #e7f52c;
+  --accent-foreground: #10264a;
+  --success: #159653;
+  --success-bg: rgba(21, 150, 83, 0.08);
   --danger: #dc2626;
   --danger-bg: rgba(220, 38, 38, 0.07);
 }
@@ -29,10 +29,10 @@
   --foreground: #f4f4f0;
   --muted: #1d1d1a;
   --muted-foreground: #9c9c93;
-  --primary: #fcff52;
-  --primary-foreground: #1c1d0a;
-  --accent: #fcff52;
-  --accent-foreground: #1c1d0a;
+  --primary: #e7f52c;
+  --primary-foreground: #10264a;
+  --accent: #e7f52c;
+  --accent-foreground: #10264a;
   --success: #4ade80;
   --success-bg: rgba(74, 222, 128, 0.1);
   --danger: #f87171;
@@ -83,6 +83,39 @@
   }
 }
 
+.landing-mesh {
+  background-image:
+    radial-gradient(ellipse 680px 420px at 82% 260px, color-mix(in srgb, var(--accent) 12%, transparent), transparent 100%),
+    radial-gradient(ellipse 560px 460px at 8% 1050px, color-mix(in srgb, #72bfb2 12%, transparent), transparent 100%),
+    radial-gradient(ellipse 700px 500px at 72% 2100px, color-mix(in srgb, #8ca4da 10%, transparent), transparent 100%);
+}
+
+.dark .landing-mesh {
+  background-image:
+    radial-gradient(ellipse 680px 420px at 82% 260px, color-mix(in srgb, var(--accent) 10%, transparent), transparent 100%),
+    radial-gradient(ellipse 560px 460px at 8% 1050px, color-mix(in srgb, #287c72 16%, transparent), transparent 100%),
+    radial-gradient(ellipse 700px 500px at 72% 2100px, color-mix(in srgb, #394a7e 17%, transparent), transparent 100%);
+}
+
+.landing-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at center, black 10%, transparent 76%);
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--card) 52%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 16px 48px rgba(16, 38, 74, 0.08);
+}
+
+.dark .glass-panel {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+
 /* ─── Base ───────────────────────────────────────────────────── */
 
 * {
@@ -91,6 +124,13 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
 }
 
 body {

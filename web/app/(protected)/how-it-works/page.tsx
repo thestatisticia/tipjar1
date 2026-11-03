@@ -1,40 +1,40 @@
 'use client';
 
-import { ShieldCheck, Wallet, Zap } from 'lucide-react';
+import { Heart, ListTodo, Megaphone } from 'lucide-react';
 
 const STEPS = [
   {
     n: '01',
-    title: 'Sign in & register',
-    desc: 'Connect your wallet via Privy. Pick a username — it gets registered on the TipJarRegistry smart contract on Celo.',
+    title: 'Connect your wallet',
+    desc: 'Use MetaMask on Celo to explore GOODHUB. Wallet verification is not required for general app access.',
   },
   {
     n: '02',
-    title: 'Share your page',
-    desc: 'Copy your tipping link or QR code and share it anywhere. Embed the iframe widget directly on your website.',
+    title: 'Choose how to participate',
+    desc: 'Find community tasks, join campaigns, explore creators, or set up your own public creator page.',
   },
   {
     n: '03',
-    title: 'Earn peer-to-peer',
-    desc: 'Fans send G$ directly from their wallet to yours, on-chain. Instant, transparent, and fee-free.',
+    title: 'Contribute and track activity',
+    desc: 'Follow each activity’s requirements, submit work when needed, and track your tips and approved rewards from your dashboard.',
   },
 ];
 
 const HIGHLIGHTS = [
   {
-    icon: Zap,
-    title: 'Instant flow',
-    desc: 'Tips move wallet-to-wallet in seconds so creators do not wait for payouts.',
+    icon: ListTodo,
+    title: 'Community tasks',
+    desc: 'Explore funded tasks, contribute, and submit proof for review.',
   },
   {
-    icon: Wallet,
-    title: 'Creator owned funds',
-    desc: 'TipJar never custodians money. Fans send directly to the creator wallet.',
+    icon: Megaphone,
+    title: 'Campaigns',
+    desc: 'Apply to campaigns and share completed work with organizers.',
   },
   {
-    icon: ShieldCheck,
-    title: 'Transparent by design',
-    desc: 'Every tip is on-chain and verifiable on Celo for full transparency.',
+    icon: Heart,
+    title: 'Creator support',
+    desc: 'Support creators directly with G$ on Celo.',
   },
 ];
 
@@ -46,10 +46,10 @@ export default function HowItWorksPage() {
           How it works
         </span>
         <h2 className="mt-2 font-display text-3xl font-bold tracking-tight max-md:text-2xl">
-          From signup to your first tip
+          From connecting to contributing
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Direct creator support with G$ — Universal Basic Income on Celo.
+          One place to participate in community activities and support creators with G$ on Celo.
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export default function HowItWorksPage() {
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-6">
-        <h3 className="font-display text-base font-semibold">Why creators trust TipJar</h3>
+        <h3 className="font-display text-base font-semibold">A hub for community participation</h3>
         <div className="mt-4 grid grid-cols-3 gap-3 max-md:grid-cols-1">
           {HIGHLIGHTS.map((item) => {
             const Icon = item.icon;

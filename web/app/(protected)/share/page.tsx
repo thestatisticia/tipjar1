@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { Copy, Check, QrCode, Code, Link2, Download, ArrowRight } from 'lucide-react';
+import { Copy, Check, QrCode, Code, Link2, Download, ArrowRight, ArrowUpRight } from 'lucide-react';
 import { useCreator } from '@/providers/CreatorProvider';
+
+const subscribeToNothing = () => () => {};
+const getOrigin = () => window.location.origin;
+const getServerOrigin = () => '';
 
 export default function SharePage() {
   const { creator } = useCreator();
   const [copied, setCopied] = useState<'link' | 'widget' | null>(null);
-  const [origin, setOrigin] = useState('');
-
-  useEffect(() => setOrigin(window.location.origin), []);
+  const origin = useSyncExternalStore(subscribeToNothing, getOrigin, getServerOrigin);
 
   const tipLink = `${origin}/tip/${creator.username || 'username'}`;
   const widgetCode = `<iframe src="${origin}/widget/${creator.username || 'username'}" width="350" height="500" style="border:1px solid #e5e5e5;border-radius:16px;"></iframe>`;
@@ -35,11 +37,18 @@ export default function SharePage() {
   return (
     <div className="mx-auto flex max-w-3xl animate-fade-up flex-col gap-6">
       <div>
-        <h2 className="font-display text-2xl font-bold tracking-tight">Share</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight">Share & tip page</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Put your tip jar everywhere your fans are.
         </p>
       </div>
+      <Link
+        href="/preview"
+        className="inline-flex h-10 w-fit items-center gap-2 rounded-lg border border-line bg-card px-3.5 text-sm font-semibold transition-colors hover:border-foreground/30"
+      >
+        Preview tip page
+        <ArrowUpRight size={14} />
+      </Link>
 
       {!creator.username && (
         <Link

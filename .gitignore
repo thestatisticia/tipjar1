@@ -5,6 +5,8 @@ node_modules/
 # Next.js
 web/.next/
 web/out/
+web/build/
+web/.vercel/
 
 # Env files (never commit secrets)
 .env
@@ -14,10 +16,11 @@ web/out/
 .env*.local
 !**/.env.example
 
-# Build output
-web/build/
-
 # Misc
 .DS_Store
 *.log
 contracts/.env
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+**/*.tsbuildinfo

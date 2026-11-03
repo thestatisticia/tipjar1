@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
 import './globals.css';
-import PrivyClientProvider from '@/providers/PrivyClientProvider';
+import Web3Provider from '@/providers/Web3Provider';
 
 export const metadata: Metadata = {
-  title: 'G$ Tip Jar',
-  description: 'Support your favourite creators with GoodDollar on Celo',
+  title: 'GOODHUB — Community rewards on Celo',
+  description: 'Discover opportunities, participate, earn G$, and support creators with GOODHUB.',
+  icons: { icon: '/icon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <PrivyClientProvider>{children}</PrivyClientProvider>
+          <Web3Provider>{children}</Web3Provider>
         </ThemeProvider>
       </body>
     </html>
