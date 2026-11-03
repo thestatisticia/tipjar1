@@ -11,20 +11,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'username or wallet param is required' }, { status: 400 });
   }
 
-  try {
-    const [received, sent] = await Promise.all([
-      username ? getReceivedTipStats(username) : Promise.resolve({ total: 0, count: 0 }),
-      wallet ? getSentTipStats(wallet) : Promise.resolve({ total: 0, count: 0 }),
-    ]);
+  const [received, sent] = await Promise.all([
+    username ? getReceivedTipStats(username) : Promise.resolve({ total: 0, count: 0 }),
+    wallet ? getSentTipStats(wallet) : Promise.resolve({ total: 0, count: 0 }),
+  ]);
 
-    return NextResponse.json({
-      totalReceived: received.total,
-      receivedCount: received.count,
-      totalTipped: sent.total,
-      sentCount: sent.count,
-    });
-  } catch (error) {
-    console.error('Tip statistics lookup failed:', error);
-    return NextResponse.json({ error: 'Could not load tip statistics.' }, { status: 503 });
-  }
+  return NextResponse.json({
+    totalReceived: received.total,
+    receivedCount: received.count,
+    totalTipped: sent.total,
+    sentCount: sent.count,
+  });
 }

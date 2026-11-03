@@ -18,13 +18,11 @@ export default function TipPageClient({ username }: { username: string }) {
   }, [username]);
 
   const handleAddTip = async (tip: Tip) => {
-    const response = await fetch('/api/tips', {
+    await fetch('/api/tips', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tip),
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Could not save your tip activity.');
   };
 
   if (notFound) {

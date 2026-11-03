@@ -35,7 +35,6 @@ export interface CreatorLeaderboardEntry {
   username: string;
   name: string;
   avatarUrl: string;
-  walletAddress: string;
   totalReceived: number;
   tipsCount: number;
 }
@@ -109,11 +108,10 @@ export async function getReceivedTipStats(creatorUsername: string): Promise<TipA
     .select('amount')
     .eq('creator_username', creatorUsername);
 
-  if (error) throw error;
+  if (error || !data) return { total: 0, count: 0 };
 
-  const rows = data ?? [];
-  const total = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  return { total, count: rows.length };
+  const total = data.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  return { total, count: data.length };
 }
 
 export async function getSentTipStats(senderAddress: string): Promise<TipAggregate> {
@@ -124,11 +122,10 @@ export async function getSentTipStats(senderAddress: string): Promise<TipAggrega
     .select('amount')
     .ilike('sender_address', normalized);
 
-  if (error) throw error;
+  if (error || !data) return { total: 0, count: 0 };
 
-  const rows = data ?? [];
-  const total = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  return { total, count: rows.length };
+  const total = data.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  return { total, count: data.length };
 }
 
 export async function getTopCreatorsByTips(limit = 10): Promise<CreatorLeaderboardEntry[]> {
@@ -163,15 +160,14 @@ export async function getTopCreatorsByTips(limit = 10): Promise<CreatorLeaderboa
   const usernames = sorted.map((r) => r.username);
   const { data: creatorsData } = await supabase
     .from('tipjar_creators')
-    .select('username, name, avatar_url, wallet_address')
+    .select('username, name, avatar_url')
     .in('username', usernames);
 
-  const creatorMeta = new Map<string, { name: string; avatar_url: string; wallet_address: string }>();
+  const creatorMeta = new Map<string, { name: string; avatar_url: string }>();
   for (const creator of creatorsData || []) {
     creatorMeta.set(String(creator.username || '').toLowerCase(), {
       name: String(creator.name || ''),
       avatar_url: String(creator.avatar_url || ''),
-      wallet_address: String(creator.wallet_address || ''),
     });
   }
 
@@ -182,7 +178,6 @@ export async function getTopCreatorsByTips(limit = 10): Promise<CreatorLeaderboa
       username: row.username,
       name: meta?.name || row.username,
       avatarUrl: meta?.avatar_url || '',
-      walletAddress: meta?.wallet_address || '',
       totalReceived: row.totalReceived,
       tipsCount: row.tipsCount,
     };

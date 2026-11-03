@@ -1,24 +1,17 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Check, LogOut, Share2, Sun, Moon } from 'lucide-react';
-import { useDisconnect } from 'wagmi';
+import { Check, Share2, Sun, Moon } from 'lucide-react';
 import { useCreator } from '@/providers/CreatorProvider';
 
 const PAGE_LABELS: Record<string, string> = {
   '/dashboard':    'Dashboard',
-  '/admin':        'Admin approvals',
-  '/tasks':        'Explore tasks',
-  '/campaigns':    'Campaigns',
-  '/notifications':'Notifications',
-  '/share':        'My public page',
-  '/spin':         'Daily rewards',
-  '/preview':      'My public page',
-  '/leaderboard':  'Discover creators',
+  '/share':        'Share',
+  '/preview':      'Tip Page',
   '/settings':     'Settings',
-  '/how-it-works': 'Help & support',
+  '/how-it-works': 'How it Works',
 };
 
 function shortAddr(addr: string) {
@@ -27,33 +20,19 @@ function shortAddr(addr: string) {
 
 export default function Navbar() {
   const [copied, setCopied] = useState(false);
-  const [disconnectError, setDisconnectError] = useState('');
-  const { disconnectAsync } = useDisconnect();
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { creator, walletAddress } = useCreator();
   const username = creator.username;
+
+  useEffect(() => setMounted(true), []);
 
   const copyLink = () => {
     if (!username) return;
     navigator.clipboard.writeText(`${window.location.origin}/tip/${username}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDisconnect = async () => {
-    setDisconnectError('');
-    try {
-      await disconnectAsync();
-    } catch (error) {
-      console.error('Wallet disconnect failed:', error);
-      setDisconnectError('Could not disconnect wallet.');
-    }
   };
 
   return (
@@ -73,20 +52,9 @@ export default function Navbar() {
 
         {/* Wallet */}
         {walletAddress && (
-          <div className="flex items-center gap-1 rounded-full border border-line bg-card p-0.5">
-            <span className="px-2 font-mono text-[11px] text-muted-foreground max-sm:hidden">
-              {shortAddr(walletAddress)}
-            </span>
-            <button
-              type="button"
-              onClick={() => void handleDisconnect()}
-              title={disconnectError || 'Disconnect wallet'}
-              aria-label={disconnectError || 'Disconnect wallet'}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <LogOut size={13} />
-            </button>
-          </div>
+          <span className="rounded-full border border-line bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground max-sm:hidden">
+            {shortAddr(walletAddress)}
+          </span>
         )}
 
         {/* Theme toggle */}
